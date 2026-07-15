@@ -93,6 +93,16 @@
     background: #1d1d1f; color: #fff; font-size: 14px; font-weight: 700;
     border: none; border-radius: 12px; cursor: pointer;
   }
+  .fb-row {
+    display: none; margin-top: 12px; padding: 10px;
+    background: #f5f0ff; border-radius: 10px; text-align: center;
+    font-size: 12px; font-weight: 700; color: var(--muted);
+  }
+  .fb-row button {
+    margin: 6px 5px 0; padding: 8px 16px; font-size: 13px; font-weight: 700;
+    border: 2px solid #e9e2f5; border-radius: 999px; background: #fff; cursor: pointer;
+  }
+  .fb-row button:active { transform: scale(.96); }
   .legend { display: flex; justify-content: center; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
   .legend span::before {
     content: ""; display: inline-block; width: 10px; height: 10px;
@@ -203,6 +213,11 @@
   <div id="resultText"></div>
   <div class="center-notice" id="centerNotice"></div>
   <button class="share-btn" id="shareBtn">📸 この画像を保存してXでシェア</button>
+  <div class="fb-row" id="fbRow">
+    この位置、実際と合ってた?(会場で分かったら教えてね)<br>
+    <button id="fbYes">👍 合ってた</button>
+    <button id="fbNo">👎 ズレてた</button>
+  </div>
 </div>
 
 <footer>
@@ -456,6 +471,7 @@ document.getElementById("goBtn").addEventListener("click", () => {
       : `✅ <b>初日の実配置を反映済みの確定版です。</b>`;
     centerNotice.style.display = "block";
     shareBtn.style.display = "block";
+    document.getElementById("fbRow").style.display = "block";
   } else {
     const conf = BLOCKS[currentType];
     const blockKey = document.getElementById("inBlock").value;
@@ -478,8 +494,17 @@ document.getElementById("goBtn").addEventListener("click", () => {
     resultText.innerHTML = `<span class="zone-name">${label} ${row}列 ${num}番</span><br>${b.desc}のあたり!`;
     centerNotice.style.display = "none";
     shareBtn.style.display = "block";
+    document.getElementById("fbRow").style.display = "block";
   }
 });
+
+// 「合ってた?」フィードバック(送るのは1ビット+席種のみ)
+function sendFeedback(v) {
+  countEvent(`feedback-${v}-${currentType || "unknown"}`);
+  document.getElementById("fbRow").innerHTML = "ありがとう! 精度改善に使わせてもらいます 🙌";
+}
+document.getElementById("fbYes").addEventListener("click", () => sendFeedback("yes"));
+document.getElementById("fbNo").addEventListener("click", () => sendFeedback("no"));
 
 // シェア画像生成(SVG→canvas→PNG。ポスター風)
 document.getElementById("shareBtn").addEventListener("click", async () => {
