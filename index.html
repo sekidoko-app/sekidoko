@@ -3,12 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
 <title>席ドコ? | 横浜アリーナ座席チェッカー</title>
 <meta name="description" content="座席番号を入れるだけで、横浜アリーナのどのへんか一目でわかる。X用のシェア画像も作れる非公式ファンツール。">
 <meta property="og:title" content="席ドコ? | 横浜アリーナ座席チェッカー">
 <meta property="og:description" content="座席番号を入れるだけで、あなたの席がどのへんか一目でわかる。X用のシェア画像つき(非公式ファンツール)">
 <meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://sekidoko-app.github.io/sekidoko/">
+<meta property="og:image" content="https://sekidoko-app.github.io/sekidoko/ogp.jpg">
+<meta property="og:image:width" content="600">
+<meta property="og:image:height" content="315">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root {
     --bg: #faf7ff;
@@ -112,6 +117,19 @@
   .lg-arena::before { background: #f78fc2; }
   .lg-center::before { background: #fbd97e; }
   footer { text-align: center; margin-top: 24px; font-size: 10.5px; color: var(--muted); line-height: 1.8; }
+  .top-banner {
+    background: #fef3c7; border: 1.5px solid #fcd34d; border-radius: 12px;
+    padding: 9px 12px; margin-top: 12px; text-align: center;
+    font-size: 12px; font-weight: 700; color: #92400e; line-height: 1.6;
+  }
+  .save-img { display: none; margin-top: 12px; text-align: center; }
+  .save-img img { width: 100%; max-width: 320px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  .save-img p { font-size: 12.5px; color: var(--text); margin-top: 8px; line-height: 1.7; font-weight: 700; }
+  .x-btn {
+    display: inline-block; margin-top: 10px; padding: 11px 22px;
+    background: #000; color: #fff; font-size: 14px; font-weight: 700;
+    border-radius: 999px; text-decoration: none;
+  }
 </style>
 </head>
 <body>
@@ -120,6 +138,8 @@
   <div class="event-badge">≠ME 喝采パレード 横浜アリーナ 7/17(金)・18(土)</div>
   <div class="sub">座席番号を入れるだけ。あなたの席、だいたいココ。</div>
 </header>
+
+<div class="top-banner">⏰ センターの席は<b>7/17(金)夜、初日の実際の構成に更新</b>します。土曜参加の人はブックマークしてまた見てね!</div>
 
 <div class="card">
   <h2>1. チケットの席種をタップ</h2>
@@ -212,7 +232,8 @@
   <div class="stage-note">※ ステージ位置は横アリで最も多い基本パターンで仮置き中。初日(7/17)の夜、実際の構成に更新します。</div>
   <div id="resultText"></div>
   <div class="center-notice" id="centerNotice"></div>
-  <button class="share-btn" id="shareBtn">📸 この画像を保存してXでシェア</button>
+  <button class="share-btn" id="shareBtn">📸 シェア画像をつくる</button>
+  <div class="save-img" id="saveImg"></div>
   <div class="fb-row" id="fbRow">
     この位置、実際と合ってた?(会場で分かったら教えてね)<br>
     <button id="fbYes">👍 合ってた</button>
@@ -221,14 +242,26 @@
 </div>
 
 <footer>
-  ※ 非公式のファン作成ツールです。会場図は公式座席案内を元にした簡略イメージで、実際の位置・見え方を保証するものではありません。<br>
-  ※ 座席の列・番号は保存も送信もされません(位置の計算はあなたの画面の中だけで完結します)。<br>
-  ※ 計測するのは「ページの表示回数」「ボタンが押された回数(センター/アリーナ/スタンドの別まで)」だけです。
+  ※ 本ツールは<b>個人が趣味で作った非公式ツール</b>です。≠ME・運営(代々木アニメーション学院)・キングレコード・横浜アリーナとは一切関係ありません。会場図は公式座席案内を元にした簡略イメージで、実際の位置・見え方を保証しません。<br>
+  ※ 座席の良し悪しの判断やチケットの購入・交換の根拠には使わないでね。<br>
+  ※ 会場での正確な座席(列・番号)のSNS投稿はマナー違反とされることがあります。シェアは「だいたいこのへん」のイメージ共有にとどめてね。券面(氏名・顔写真)のスクショは貼らないで。<br>
+  ※ 座席の列・番号は保存も送信もされません(位置の計算はあなたの画面の中だけで完結)。計測は表示回数・ボタン回数(席種の別まで)のみで、外部サービス(counterapi.dev)を利用します。
 </footer>
 
 <script>
-// アクセス数のカウントのみ(誰が・どの席かは一切送信しない)
-fetch("https://api.counterapi.dev/v1/sekidoko/visits/up").catch(() => {});
+// 表示回数の計測(流入元別。運営自身・列・番号は送信しない)
+(function () {
+  try {
+    var qs = new URLSearchParams(location.search);
+    // ?owner=1 で一度来たら以降このブラウザは集計から除外(運営テスト用)
+    if (qs.get("owner") === "1") localStorage.setItem("sekidoko_owner", "1");
+    if (localStorage.getItem("sekidoko_owner") === "1") return;
+    var f = qs.get("f");
+    var src = (f === "line" || f === "x" || f === "img") ? f : "direct";
+    fetch("https://api.counterapi.dev/v1/sekidoko/visits/up").catch(function () {});
+    fetch("https://api.counterapi.dev/v1/sekidoko/visits-" + src + "/up").catch(function () {});
+  } catch (e) {}
+})();
 </script>
 
 <canvas id="shareCanvas" width="800" height="1000" style="display:none"></canvas>
@@ -431,7 +464,19 @@ function renderInputs() {
 
 // 利用回数の計測(席種の別まで。列・番号は送信しない)
 function countEvent(name) {
+  try { if (localStorage.getItem("sekidoko_owner") === "1") return; } catch (e) {}
   fetch(`https://api.counterapi.dev/v1/sekidoko/${name}/up`).catch(() => {});
+}
+
+// 全角数字→半角。空欄なら警告してnull(無警告で1列1番になるのを防ぐ)
+function toHankaku(s) { return (s || "").replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)); }
+function readRowNum(maxRow) {
+  const rowRaw = toHankaku(document.getElementById("inRow").value).trim();
+  const numRaw = toHankaku(document.getElementById("inNum").value).trim();
+  if (rowRaw === "" || numRaw === "") { alert("列と番号を入れてね!"); return null; }
+  const row = Math.min(Math.max(parseInt(rowRaw, 10) || 1, 1), maxRow);
+  const num = Math.max(parseInt(numRaw, 10) || 1, 1);
+  return { row, num };
 }
 
 document.getElementById("goBtn").addEventListener("click", () => {
@@ -446,8 +491,9 @@ document.getElementById("goBtn").addEventListener("click", () => {
     const forecast = CENTER_CONFIG.status === "forecast";
     let x, y, seatLabel, desc;
     if (CENTER_CONFIG.scheme === "row") {
-      const row = Math.min(Math.max(parseInt(document.getElementById("inRow").value) || 1, 1), CENTER_CONFIG.maxRow);
-      const num = parseInt(document.getElementById("inNum").value) || 1;
+      const rn = readRowNum(CENTER_CONFIG.maxRow);
+      if (!rn) return;
+      const row = rn.row, num = rn.num;
       const numRatio = Math.min(num / CENTER_CONFIG.numPerRow, 1);
       // 列: ステージ側(右)→後方(左) / 番号: 向かって右(下)→左(上)
       x = 261 - (row / CENTER_CONFIG.maxRow) * 138;
@@ -466,9 +512,12 @@ document.getElementById("goBtn").addEventListener("click", () => {
     pin.style.display = "";
     resultText.style.display = "block";
     resultText.innerHTML = `<span class="zone-name">${seatLabel}${forecast ? "(予想)" : ""}</span><br>${desc}のあたり! 🎉`;
+    // シェア画像には正確な列・番号を焼かない(座席晒し回避)。ゾーンだけ。
+    window.__shareL1 = (CENTER_CONFIG.scheme === "row" ? "センター" : seatLabel) + (forecast ? "(予想)" : "");
+    window.__shareL2 = desc + "あたり!";
     centerNotice.innerHTML = forecast
-      ? `🎪 <b>これは予想配置です!</b><br>${CENTER_CONFIG.note}<br><b>初日(7/17)の夜に確定版へ更新する</b>ので、土曜参加の人はもう一度見に来てね。`
-      : `✅ <b>初日の実配置を反映済みの確定版です。</b>`;
+      ? `🎪 <b>これは予想配置です!</b><br>${CENTER_CONFIG.note}<br><b>初日(7/17)の夜に最新版へ更新する</b>ので、土曜参加の人はもう一度見に来てね。`
+      : `✅ <b>初日の目撃情報で更新した最新版です(公式発表ではありません)。</b>`;
     centerNotice.style.display = "block";
     shareBtn.style.display = "block";
     document.getElementById("fbRow").style.display = "block";
@@ -477,8 +526,9 @@ document.getElementById("goBtn").addEventListener("click", () => {
     const blockKey = document.getElementById("inBlock").value;
     const b = conf[blockKey];
     if (!b) return;
-    const row = Math.min(Math.max(parseInt(document.getElementById("inRow").value) || 1, 1), conf.maxRow);
-    const num = parseInt(document.getElementById("inNum").value) || 1;
+    const rn = readRowNum(conf.maxRow);
+    if (!rn) return;
+    const row = rn.row, num = rn.num;
     // 列: 内周→外周へ / 番号: ブロック左端→右端へ(平均席数で近似)
     const d = row / conf.maxRow;
     let x = b.in[0] + (b.out[0] - b.in[0]) * d;
@@ -492,84 +542,122 @@ document.getElementById("goBtn").addEventListener("click", () => {
     const label = currentType === "arena" ? `アリーナ ${blockKey}ブロック` : `スタンド ${blockKey}`;
     resultText.style.display = "block";
     resultText.innerHTML = `<span class="zone-name">${label} ${row}列 ${num}番</span><br>${b.desc}のあたり!`;
+    // シェア画像はブロックまで(正確な列・番号は焼かない)
+    window.__shareL1 = label;
+    window.__shareL2 = b.desc + "あたり!";
     centerNotice.style.display = "none";
     shareBtn.style.display = "block";
     document.getElementById("fbRow").style.display = "block";
   }
+  // 検索したら地図まで自動スクロール(キーボードを閉じて結果を見せる)
+  document.getElementById("saveImg").style.display = "none";
+  if (document.activeElement) document.activeElement.blur();
+  document.getElementById("venueMap").scrollIntoView({ behavior: "smooth", block: "center" });
 });
 
-// 「合ってた?」フィードバック(送るのは1ビット+席種のみ)
+// Enterキーでも検索できるように
+document.getElementById("inputArea").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); document.getElementById("goBtn").click(); }
+});
+
+// 「合ってた?」フィードバック(送るのは1ビット+席種+予想/確定フェーズのみ)
 function sendFeedback(v) {
-  countEvent(`feedback-${v}-${currentType || "unknown"}`);
+  const phase = currentType === "center" ? "-" + CENTER_CONFIG.status : "";
+  countEvent(`feedback-${v}-${currentType || "unknown"}${phase}`);
   document.getElementById("fbRow").innerHTML = "ありがとう! 精度改善に使わせてもらいます 🙌";
 }
 document.getElementById("fbYes").addEventListener("click", () => sendFeedback("yes"));
 document.getElementById("fbNo").addEventListener("click", () => sendFeedback("no"));
 
-// シェア画像生成(SVG→canvas→PNG。ポスター風)
-document.getElementById("shareBtn").addEventListener("click", async () => {
-  countEvent("share");
+// ポスター画像をcanvasに描画してPNG Blobを返す(シェア用)
+async function renderPoster() {
   const svg = document.getElementById("venueMap");
   const canvas = document.getElementById("shareCanvas");
   const ctx = canvas.getContext("2d");
+  const F = '"Hiragino Sans", "Noto Sans JP", sans-serif';
 
-  // 背景: 深い夜空グラデーション
   const grad = ctx.createLinearGradient(0, 0, 800, 1000);
   grad.addColorStop(0, "#3b0764");
   grad.addColorStop(1, "#831843");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 800, 1000);
 
-  // タイトル
   ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
-  ctx.font = "900 62px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
+  ctx.font = "900 62px " + F;
   ctx.fillText("席ドコ?", 400, 96);
   ctx.fillStyle = "#ddd6fe";
-  ctx.font = "700 28px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
+  ctx.font = "700 28px " + F;
   ctx.fillText("≠ME 喝采パレード 横浜アリーナ", 400, 148);
 
-  // 白カード
   ctx.fillStyle = "#ffffff";
-  if (ctx.roundRect) {
-    ctx.beginPath();
-    ctx.roundRect(40, 182, 720, 588, 28);
-    ctx.fill();
-  } else {
-    ctx.fillRect(40, 182, 720, 588);
-  }
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(40, 182, 720, 560, 28); ctx.fill(); }
+  else ctx.fillRect(40, 182, 720, 560);
 
-  // 会場図
-  const svgStr = new XMLSerializer().serializeToString(svg);
+  // SVGは width/height を明示してからラスタライズ(iOS/Firefoxでの描画失敗対策)
+  const clone = svg.cloneNode(true);
+  clone.setAttribute("width", "440");
+  clone.setAttribute("height", "340");
+  clone.setAttribute("font-family", '-apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif');
+  const svgStr = new XMLSerializer().serializeToString(clone);
   const img = new Image();
-  const blob = new Blob([svgStr], { type: "image/svg+xml" });
+  const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  await new Promise(res => { img.onload = res; img.src = url; });
-  ctx.drawImage(img, 60, 212, 680, 525);
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+  ctx.drawImage(img, 60, 202, 680, 525);
   URL.revokeObjectURL(url);
 
-  // 座席テキスト
-  const lines = document.getElementById("resultText").innerText.split("\n");
   ctx.fillStyle = "#ffffff";
-  ctx.font = "900 42px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
-  ctx.fillText(lines[0] || "", 400, 852, 720);
+  ctx.font = "900 42px " + F;
+  ctx.fillText(window.__shareL1 || "", 400, 812, 720);
   ctx.fillStyle = "#fbcfe8";
-  ctx.font = "700 28px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
-  ctx.fillText(lines[1] || "", 400, 900, 720);
+  ctx.font = "700 27px " + F;
+  ctx.fillText(window.__shareL2 || "", 400, 858, 720);
+  // URL(バイラルの生命線: 画像を見た人がここから辿れる)
+  ctx.fillStyle = "#fde68a";
+  ctx.font = "800 30px " + F;
+  ctx.fillText("sekidoko-app.github.io/sekidoko", 400, 928, 740);
   ctx.fillStyle = "#c4b5fd";
-  ctx.font = "400 21px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
-  ctx.fillText("席ドコ? — 非公式ファンツール", 400, 956);
+  ctx.font = "400 20px " + F;
+  ctx.fillText("席ドコ?(非公式ファンツール)で作成", 400, 968, 720);
 
-  canvas.toBlob(async (pngBlob) => {
+  return new Promise((res) => canvas.toBlob((b) => res(b), "image/png"));
+}
+
+const SHARE_TEXT = "≠MEの横アリ、私の席このへんだった! #席ドコ";
+const SHARE_URL = "https://sekidoko-app.github.io/sekidoko/?f=img";
+
+let sharing = false;
+document.getElementById("shareBtn").addEventListener("click", async () => {
+  if (sharing) return;
+  sharing = true;
+  countEvent("share");
+  try {
+    const pngBlob = await renderPoster();
     const file = new File([pngBlob], "sekidoko.png", { type: "image/png" });
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], text: "席ドコ? #席ドコ" }); return; } catch (e) {}
+      try {
+        await navigator.share({ files: [file], text: SHARE_TEXT + "\n" + SHARE_URL });
+        countEvent("share-done");
+        return;
+      } catch (e) { /* キャンセル/失敗 → フォールバックへ */ }
     }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(pngBlob);
-    a.download = "sekidoko.png";
-    a.click();
-  });
+    // フォールバック: 画像をページ内に出して「長押しで保存」(iOSで最も確実)
+    countEvent("share-fallback");
+    const box = document.getElementById("saveImg");
+    // dataURLで表示(LINE内ブラウザでも長押し保存が通りやすい)
+    const dataUrl = document.getElementById("shareCanvas").toDataURL("image/png");
+    box.innerHTML = `<img src="${dataUrl}" alt="あなたの席の画像">
+      <p>↑ この画像を長押しして保存 →<br>Xやインスタに貼ってね!<br>
+      <a class="x-btn" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(SHARE_URL)}" target="_blank" rel="noopener">Xに文つきで投稿する</a><br>
+      <span style="font-size:11px">うまく保存できない時はSafariで開いてね</span></p>`;
+    box.style.display = "block";
+    box.scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (e) {
+    alert("画像の作成に失敗しちゃった…ごめんね。スクショで代用してもらえる?");
+  } finally {
+    sharing = false;
+  }
 });
 </script>
 </body>
