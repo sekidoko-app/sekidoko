@@ -207,7 +207,8 @@
 
 <footer>
   ※ 非公式のファン作成ツールです。会場図は公式座席案内を元にした簡略イメージで、実際の位置・見え方を保証するものではありません。<br>
-  ※ 座席データは保存されません(入力はあなたの画面の中だけで完結します)。計測はページの表示回数のみです。
+  ※ 座席の列・番号は保存も送信もされません(位置の計算はあなたの画面の中だけで完結します)。<br>
+  ※ 計測するのは「ページの表示回数」「ボタンが押された回数(センター/アリーナ/スタンドの別まで)」だけです。
 </footer>
 
 <script>
@@ -413,8 +414,14 @@ function renderInputs() {
   }
 }
 
+// 利用回数の計測(席種の別まで。列・番号は送信しない)
+function countEvent(name) {
+  fetch(`https://api.counterapi.dev/v1/sekidoko/${name}/up`).catch(() => {});
+}
+
 document.getElementById("goBtn").addEventListener("click", () => {
   if (!currentType) { alert("まず席種をタップしてね!"); return; }
+  countEvent("check-" + currentType);
   const pin = document.getElementById("pin");
   const resultText = document.getElementById("resultText");
   const centerNotice = document.getElementById("centerNotice");
@@ -476,6 +483,7 @@ document.getElementById("goBtn").addEventListener("click", () => {
 
 // シェア画像生成(SVG→canvas→PNG。ポスター風)
 document.getElementById("shareBtn").addEventListener("click", async () => {
+  countEvent("share");
   const svg = document.getElementById("venueMap");
   const canvas = document.getElementById("shareCanvas");
   const ctx = canvas.getContext("2d");
