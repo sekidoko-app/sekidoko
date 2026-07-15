@@ -190,7 +190,7 @@
     <!-- 客席(下地の帯・座席列・通路をJSが公式のスタジアム形に沿って生成) -->
     <g id="seatRows"></g>
 
-    <!-- センターのブロック・センステ等(JSがCENTER_CONFIGから描画) -->
+    <!-- センターのでべそ・ブロック(JSがCENTER_CONFIGから描画) -->
     <g id="centerBlocks"></g>
 
     <!-- ステージ(東側=図の右端。横アリの基本パターン) -->
@@ -271,20 +271,16 @@
 // センター構成(1Fフロア)。可動なので status で予想/確定を切り替える。
 // 金曜(初日)の夜: 実配置に直して status を "confirmed" にするだけ。
 // 座標系: フロア=角丸長方形 x112-270, y112-224。ステージは右(東)。
-// 予想根拠(2026-07-15調査):
-// - ノイミー2024横アリ・イコラブ2021横アリともセンターは「○列○番」の通し列方式
-// - ノイミー2024横アリ実績: メイン+センステ+後方バクステ+外周+トロッコ
-// - 同ツアー実績: センステは前方帯14〜16列の先・天面LED。花道の確証なし(細導線のみ描画)
-// - 番号は向かって右(上手)側から振られるのが横アリの特殊仕様
-// ============================================================
+// 構成根拠(2026-07-15):
+// - センターは「○列○番」の通し列方式(番号は向かって右=上手から)
+// - 【嫁の一次情報 07-15】センターステージ・後方バックステージは無し。
+//   メインステージから少し張り出す"でべそ"のみ。→ それを反映
 const CENTER_CONFIG = {
   status: "forecast",       // "forecast"(予想) | "confirmed"(確定)
   scheme: "row",            // "row"(センター○列○番) | "block"(英字ブロック式だった場合の保険)
-  maxRow: 50, numPerRow: 54, // 横アリ通し方式は最大63列×54番(ライブ基地)。エンドステージ+センステで実質50列程度と概算
-  note: "2024年ノイミー横アリ公演+同ツアー他会場の実績(センステ・後方バクステ・外周トロッコ)をもとにした予想です。",
-  runway: { x: 228, y: 164, w: 40, h: 8 },          // ステージ→センステの導線(細め。花道の確証なし)
-  centerStage: { cx: 214, cy: 168, r: 14 },          // センステ: 前方帯14〜16列の先(ツアー実績)
-  backStage: { x: 118, y: 152, w: 28, h: 31 },       // 後方バクステ(2024実績より予想)
+  maxRow: 50, numPerRow: 54, // 横アリ通し方式は最大63列×54番(ライブ基地)。エンドステージで実質50列程度と概算
+  note: "嫁の情報+同ツアー実績をもとにした予想です(メインステージから少し張り出す\"でべそ\"のみ。センターステージ・バックステージは無し)。",
+  debeso: { x: 222, y: 159, w: 42, h: 16 },         // メインから少し張り出す"でべそ"(嫁情報)
   blocks: []  // scheme:"block" の場合のみ使用({name,x,y,w,h}を列挙)
 };
 
@@ -381,25 +377,15 @@ function genSeats() {
 }
 genSeats();
 
-// センターのセンステ・バクステ・導線・(ブロック)をSVGへ描画(予想=点線・確定=実線)
+// センターの"でべそ"・(ブロック)をSVGへ描画(予想=点線・確定=実線)
 function renderCenterBlocks() {
   const g = document.getElementById("centerBlocks");
   const forecast = CENTER_CONFIG.status === "forecast";
   let html = "";
-  if (CENTER_CONFIG.runway) {
-    const r = CENTER_CONFIG.runway;
-    html += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="3" fill="#fff" opacity="0.8"/>`;
-  }
-  if (CENTER_CONFIG.centerStage) {
-    const s = CENTER_CONFIG.centerStage;
-    html += `<circle cx="${s.cx}" cy="${s.cy}" r="${s.r}" fill="url(#gStage)"/>
-      <circle cx="${s.cx}" cy="${s.cy}" r="${s.r - 2.5}" fill="none" stroke="#c4b5fd" stroke-width="1" opacity="0.9"/>
-      <text x="${s.cx}" y="${s.cy + 2.5}" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="bold">センステ</text>`;
-  }
-  if (CENTER_CONFIG.backStage) {
-    const bs = CENTER_CONFIG.backStage;
-    html += `<rect x="${bs.x}" y="${bs.y}" width="${bs.w}" height="${bs.h}" rx="4" fill="url(#gStage)"/>
-      <text x="${bs.x + bs.w / 2}" y="${bs.y + bs.h / 2 + 2.5}" text-anchor="middle" fill="#fff" font-size="6" font-weight="bold">バクステ</text>`;
+  if (CENTER_CONFIG.debeso) {
+    const d = CENTER_CONFIG.debeso;
+    html += `<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="7" fill="url(#gStage)"/>
+      <text x="${d.x + d.w / 2}" y="${d.y + d.h / 2 + 3}" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="bold">でべそ</text>`;
   }
   for (const b of CENTER_CONFIG.blocks) {
     html += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="4"
@@ -414,7 +400,7 @@ renderCenterBlocks();
 
 // 列・番号から向き・深さの説明文を作る(ステージ=右、番号1=向かって右)
 function centerDesc(row, numRatio) {
-  const depth = row <= 10 ? "ステージ目の前" : row <= 22 ? "フロア中ほど・センステ近く" : row <= 38 ? "フロア後方" : "フロア最後方・バクステ近く";
+  const depth = row <= 10 ? "ステージ目の前・でべそ近く" : row <= 22 ? "フロア中ほど" : row <= 38 ? "フロア後方" : "フロア最後方";
   const side = numRatio < 0.35 ? "・向かって右" : numRatio > 0.65 ? "・向かって左" : "・中央";
   return depth + side;
 }
