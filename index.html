@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>席ドコ? | 横浜アリーナ座席チェッカー</title>
+<meta name="description" content="座席番号を入れるだけで、横浜アリーナのどのへんか一目でわかる。X用のシェア画像も作れる非公式ファンツール。">
+<meta property="og:title" content="席ドコ? | 横浜アリーナ座席チェッカー">
+<meta property="og:description" content="座席番号を入れるだけで、あなたの席がどのへんか一目でわかる。X用のシェア画像つき(非公式ファンツール)">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<style>
+  :root {
+    --bg: #faf7ff;
+    --card: #ffffff;
+    --accent: #8b5cf6;
+    --accent2: #ec4899;
+    --text: #2d2438;
+    --muted: #8a7fa0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px 16px 48px;
+  }
+  header { text-align: center; padding: 12px 0 4px; }
+  .logo {
+    font-size: 30px; font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+  }
+  .event-badge {
+    display: inline-block; margin-top: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-size: 13px; font-weight: 700;
+    padding: 5px 14px; border-radius: 999px;
+  }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .card {
+    background: var(--card); border-radius: 16px;
+    padding: 16px; margin-top: 14px;
+    box-shadow: 0 2px 12px rgba(139, 92, 246, .08);
+  }
+  .card h2 { font-size: 14px; color: var(--accent); margin-bottom: 10px; }
+  .seat-type { display: flex; gap: 8px; }
+  .seat-type button {
+    flex: 1; padding: 12px 4px; border: 2px solid #e9e2f5;
+    border-radius: 12px; background: #fff; font-size: 14px; font-weight: 700;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+  }
+  .seat-type button.active {
+    border-color: var(--accent); color: var(--accent);
+    background: #f5f0ff;
+  }
+  .seat-type button small { display: block; font-size: 10px; font-weight: 400; margin-top: 2px; }
+  .inputs { display: flex; gap: 8px; margin-top: 12px; }
+  .inputs label { flex: 1; font-size: 11px; color: var(--muted); font-weight: 700; }
+  .inputs input, .inputs select {
+    width: 100%; margin-top: 4px; padding: 10px 8px;
+    border: 2px solid #e9e2f5; border-radius: 10px;
+    font-size: 16px; text-align: center; background: #fff;
+    -webkit-appearance: none; appearance: none;
+  }
+  .inputs input:focus, .inputs select:focus { outline: none; border-color: var(--accent); }
+  .go-btn {
+    width: 100%; margin-top: 14px; padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-size: 16px; font-weight: 900; letter-spacing: 1px;
+    border: none; border-radius: 12px; cursor: pointer;
+  }
+  .go-btn:active { transform: scale(.98); }
+  #resultText {
+    text-align: center; font-size: 15px; font-weight: 700;
+    margin-top: 10px; line-height: 1.6; display: none;
+  }
+  #resultText .zone-name { font-size: 20px; color: var(--accent); }
+  .stage-note {
+    text-align: center; font-size: 10.5px; color: var(--muted); margin-top: 6px;
+  }
+  .center-notice {
+    display: none; margin-top: 10px; padding: 10px 12px;
+    background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 10px;
+    font-size: 12px; line-height: 1.7; color: #92400e;
+  }
+  .share-btn {
+    display: none; width: 100%; margin-top: 12px; padding: 13px;
+    background: #1d1d1f; color: #fff; font-size: 14px; font-weight: 700;
+    border: none; border-radius: 12px; cursor: pointer;
+  }
+  .legend { display: flex; justify-content: center; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 10px; height: 10px;
+    border-radius: 3px; margin-right: 4px; vertical-align: -1px;
+  }
+  .lg-stand::before { background: #b7a4f7; }
+  .lg-arena::before { background: #f78fc2; }
+  .lg-center::before { background: #fbd97e; }
+  footer { text-align: center; margin-top: 24px; font-size: 10.5px; color: var(--muted); line-height: 1.8; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">席ドコ?</div>
+  <div class="event-badge">≠ME 喝采パレード 横浜アリーナ 7/17(金)・18(土)</div>
+  <div class="sub">座席番号を入れるだけ。あなたの席、だいたいココ。</div>
+</header>
+
+<div class="card">
+  <h2>1. チケットの席種をタップ</h2>
+  <div class="seat-type" id="seatType">
+    <button data-type="center">センター<small>1F・ステージと同じ床</small></button>
+    <button data-type="arena">アリーナ<small>1〜2F・A〜Fブロック</small></button>
+    <button data-type="stand">スタンド<small>3〜4F・東西南北</small></button>
+  </div>
+  <div class="inputs" id="inputArea"></div>
+  <button class="go-btn" id="goBtn">この席、ドコ?</button>
+</div>
+
+<div class="card">
+  <h2>2. あなたの席はココ!</h2>
+  <svg id="venueMap" viewBox="0 0 440 340" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="gStand" cx="50%" cy="45%" r="65%">
+        <stop offset="55%" stop-color="#cabbfa"/>
+        <stop offset="100%" stop-color="#a992f2"/>
+      </radialGradient>
+      <radialGradient id="gArena" cx="50%" cy="45%" r="60%">
+        <stop offset="45%" stop-color="#fbb6d9"/>
+        <stop offset="100%" stop-color="#f286bd"/>
+      </radialGradient>
+      <linearGradient id="gFloor" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#fdeaa8"/>
+        <stop offset="100%" stop-color="#f9d878"/>
+      </linearGradient>
+      <linearGradient id="gStage" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#6d28d9"/>
+        <stop offset="100%" stop-color="#3b0f86"/>
+      </linearGradient>
+      <pattern id="pRows" width="7" height="7" patternUnits="userSpaceOnUse">
+        <path d="M 3.5 0 V 7" stroke="#d4a017" stroke-width="0.55" opacity="0.35"/>
+      </pattern>
+      <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#7c3aed" flood-opacity="0.28"/>
+      </filter>
+      <clipPath id="floorClip">
+        <rect x="116" y="116" width="150" height="104" rx="18"/>
+      </clipPath>
+    </defs>
+
+    <!-- センター(1F)フロア: 公式同様の角丸長方形 -->
+    <rect x="112" y="112" width="158" height="112" rx="22" fill="url(#gFloor)"/>
+    <rect x="112" y="112" width="158" height="112" rx="22" fill="none" stroke="#eab308" stroke-width="0.8" opacity="0.45"/>
+
+    <!-- 客席(下地の帯・座席列・通路をJSが公式のスタジアム形に沿って生成) -->
+    <g id="seatRows"></g>
+
+    <!-- センターのブロック・センステ等(JSがCENTER_CONFIGから描画) -->
+    <g id="centerBlocks"></g>
+
+    <!-- ステージ(東側=図の右端。横アリの基本パターン) -->
+    <path d="M 258 58 L 404 104 Q 416 168 404 232 L 258 278 Q 294 168 258 58 Z" fill="url(#gStage)"/>
+    <path d="M 258 58 Q 294 168 258 278" fill="none" stroke="#a78bfa" stroke-width="2.5" opacity="0.9"/>
+    <text x="342" y="174" text-anchor="middle" fill="#fff" font-size="19" font-weight="bold" letter-spacing="3">STAGE</text>
+
+    <!-- アリーナ ブロックラベル(公式Aパターン準拠: ステージ横=E/F) -->
+    <g fill="#9d2463" font-size="15" font-weight="bold" text-anchor="middle" paint-order="stroke" stroke="#ffffff" stroke-width="3">
+      <text x="262" y="98">E</text>
+      <text x="193" y="93">D</text>
+      <text x="100" y="107">C</text>
+      <text x="100" y="238">B</text>
+      <text x="193" y="253">A</text>
+      <text x="262" y="248">F</text>
+    </g>
+    <!-- スタンド 方角ラベル -->
+    <g fill="#5b21b6" font-size="13" font-weight="bold" text-anchor="middle" paint-order="stroke" stroke="#ffffff" stroke-width="3">
+      <text x="108" y="46">北</text>
+      <text x="292" y="48">東</text>
+      <text x="40" y="256">西</text>
+      <text x="288" y="296">南</text>
+    </g>
+
+    <!-- ピン -->
+    <g id="pin" style="display:none">
+      <circle r="17" fill="#ec4899" opacity="0.3">
+        <animate attributeName="r" values="11;21;11" dur="1.6s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="9.5" fill="#ec4899" stroke="#fff" stroke-width="3.2"/>
+      <circle r="3" fill="#fff"/>
+    </g>
+  </svg>
+  <div class="legend">
+    <span class="lg-center">センター(1F)</span>
+    <span class="lg-arena">アリーナ(1〜2F)</span>
+    <span class="lg-stand">スタンド(3〜4F)</span>
+  </div>
+  <div class="stage-note">※ ステージ位置は横アリで最も多い基本パターンで仮置き中。初日(7/17)の夜、実際の構成に更新します。</div>
+  <div id="resultText"></div>
+  <div class="center-notice" id="centerNotice"></div>
+  <button class="share-btn" id="shareBtn">📸 この画像を保存してXでシェア</button>
+</div>
+
+<footer>
+  ※ 非公式のファン作成ツールです。会場図は公式座席案内を元にした簡略イメージで、実際の位置・見え方を保証するものではありません。<br>
+  ※ 座席データは保存されません(入力はあなたの画面の中だけで完結します)。計測はページの表示回数のみです。
+</footer>
+
+<script>
+// アクセス数のカウントのみ(誰が・どの席かは一切送信しない)
+fetch("https://api.counterapi.dev/v1/sekidoko/visits/up").catch(() => {});
+</script>
+
+<canvas id="shareCanvas" width="800" height="1000" style="display:none"></canvas>
+
+<script>
+// ============================================================
+// センター構成(1Fフロア)。可動なので status で予想/確定を切り替える。
+// 金曜(初日)の夜: 実配置に直して status を "confirmed" にするだけ。
+// 座標系: フロア=角丸長方形 x112-270, y112-224。ステージは右(東)。
+// 予想根拠(2026-07-15調査):
+// - ノイミー2024横アリ・イコラブ2021横アリともセンターは「○列○番」の通し列方式
+// - ノイミー2024横アリ実績: メイン+センステ+後方バクステ+外周+トロッコ
+// - 同ツアー実績: センステは前方帯14〜16列の先・天面LED。花道の確証なし(細導線のみ描画)
+// - 番号は向かって右(上手)側から振られるのが横アリの特殊仕様
+// ============================================================
+const CENTER_CONFIG = {
+  status: "forecast",       // "forecast"(予想) | "confirmed"(確定)
+  scheme: "row",            // "row"(センター○列○番) | "block"(英字ブロック式だった場合の保険)
+  maxRow: 50, numPerRow: 54, // 横アリ通し方式は最大63列×54番(ライブ基地)。エンドステージ+センステで実質50列程度と概算
+  note: "2024年ノイミー横アリ公演+同ツアー他会場の実績(センステ・後方バクステ・外周トロッコ)をもとにした予想です。",
+  runway: { x: 228, y: 164, w: 40, h: 8 },          // ステージ→センステの導線(細め。花道の確証なし)
+  centerStage: { cx: 214, cy: 168, r: 14 },          // センステ: 前方帯14〜16列の先(ツアー実績)
+  backStage: { x: 118, y: 152, w: 28, h: 31 },       // 後方バクステ(2024実績より予想)
+  blocks: []  // scheme:"block" の場合のみ使用({name,x,y,w,h}を列挙)
+};
+
+// ============================================================
+// アリーナ/スタンドの固定ブロック(横浜アリーナ公式 座席案内 Aパターン準拠)
+// - アリーナ: A〜F 6ブロック・最大22列(11/12列間に通路)
+// - スタンド: 東西南北 4ブロック・10列(5/6列間に通路)
+// - 番号は各ブロック左端から時計回り。1列あたりの席数は平均値で近似
+// ============================================================
+const BLOCKS = {
+  arena: {
+    maxRow: 22, numPerRow: 42,
+    A: { in: [193, 234], out: [193, 262], tan: [-1, 0],      desc: "ステージ向かって右サイド" },
+    B: { in: [114, 221], out: [88, 248],  tan: [-0.6, -0.8], desc: "ステージ正面の奥・向かって右寄り" },
+    C: { in: [114, 115], out: [88, 88],   tan: [0.6, -0.8],  desc: "ステージ正面の奥・向かって左寄り" },
+    D: { in: [193, 102], out: [193, 74],  tan: [1, 0],       desc: "ステージ向かって左サイド" },
+    E: { in: [256, 102], out: [274, 82],  tan: [0.8, 0.6],   desc: "ステージすぐ横(向かって左)" },
+    F: { in: [256, 234], out: [274, 254], tan: [-0.8, 0.6],  desc: "ステージすぐ横(向かって右)" }
+  },
+  stand: {
+    maxRow: 10, numPerRow: 82,
+    "北": { in: [120, 54],  out: [108, 28],  tan: [1, 0],     desc: "向かって左サイドの上層" },
+    "東": { in: [283, 58],  out: [296, 30],  tan: [0.8, 0.6], desc: "ステージ寄り・向かって左の上層" },
+    "西": { in: [53, 168],  out: [25, 168],  tan: [0, -1],    desc: "ステージ正面・いちばん奥の上層" },
+    "南": { in: [283, 278], out: [296, 306], tan: [-0.8, 0.6], desc: "ステージ寄り・向かって右の上層" }
+  }
+};
+
+let currentType = null;
+
+// ============================================================
+// 客席の生成(公式Aパターンをトレース: 会場は楕円でなく角丸長方形=スタジアム形)
+// 角度系: 0°=右(東・ステージ側)、90°=下、±180°=左(西)。ステージ扇形が東側を覆う
+// 細かい破線1つ1つが座席に見えるよう dasharray で表現
+// ============================================================
+const VCX = 193, VCY = 168;
+
+// 角丸長方形の外形パス(半幅a・半高b・角丸r)
+function rrectPath(a, b, r) {
+  return `M ${VCX - a + r} ${VCY - b} H ${VCX + a - r} A ${r} ${r} 0 0 1 ${VCX + a} ${VCY - b + r} V ${VCY + b - r} A ${r} ${r} 0 0 1 ${VCX + a - r} ${VCY + b} H ${VCX - a + r} A ${r} ${r} 0 0 1 ${VCX - a} ${VCY + b - r} V ${VCY - b + r} A ${r} ${r} 0 0 1 ${VCX - a + r} ${VCY - b} Z`;
+}
+
+// 中心から方向θへ、角丸長方形(a,b)の縁までの距離(角丸は無視した近似)
+function rectDist(a, b, th) {
+  const r = Math.PI / 180;
+  const c = Math.abs(Math.cos(th * r)), s = Math.abs(Math.sin(th * r));
+  return Math.min(c > 1e-6 ? a / c : 1e9, s > 1e-6 ? b / s : 1e9);
+}
+
+// 通路(白い切れ込み): 方向θ、内縁(a,b)から長さlenだけ外へ
+function aisleLine(th, a, b, len, w) {
+  const r = Math.PI / 180, ux = Math.cos(th * r), uy = Math.sin(th * r);
+  const L = rectDist(a, b, th);
+  return `<path d="M ${(VCX + ux * L).toFixed(1)} ${(VCY + uy * L).toFixed(1)} L ${(VCX + ux * (L + len)).toFixed(1)} ${(VCY + uy * (L + len)).toFixed(1)}" stroke="#faf7ff" stroke-width="${w}" stroke-linecap="butt"/>`;
+}
+
+function genSeats() {
+  const g = document.getElementById("seatRows");
+  let s = "";
+
+  // 下地の帯(スタンド・アリーナ)
+  s += `<path d="${rrectPath(154.5, 126.5, 71)}" fill="none" stroke="#eae4fb" stroke-width="33" filter="url(#soft)"/>`;
+  s += `<path d="${rrectPath(105.5, 79.5, 41)}" fill="none" stroke="#fce0ee" stroke-width="35"/>`;
+
+  // スタンド10列(5/6列間に通路=公式)
+  for (let i = 0; i < 10; i++) {
+    const t = i + (i >= 5 ? 0.7 : 0);
+    s += `<path d="${rrectPath(139 + 3.1 * t, 111 + 3.1 * t, 58 + 2.3 * t)}" fill="none" stroke="#7863dd" stroke-width="1.5" stroke-dasharray="1.5 1.1" opacity="0.9"/>`;
+  }
+  // アリーナ22列を1本おきに11本
+  for (let i = 0; i < 11; i++) {
+    s += `<path d="${rrectPath(89 + 3.2 * i, 63 + 3.2 * i, 34 + 1.5 * i)}" fill="none" stroke="#dd4585" stroke-width="1.5" stroke-dasharray="1.5 1.1" opacity="0.85"/>`;
+  }
+
+  // アリーナの通路(A〜Fのバンク境界+バンク内の分割)
+  for (const th of [40, 60, 78, 97, 115, 134, 157, 180, -157, -134, -115, -97, -78, -60, -40]) {
+    s += aisleLine(th, 87.5, 61.5, 39, 2.2);
+  }
+  // スタンドの通路(放射状)+ 真上・真下は出入口の切り欠き(太め)
+  for (let th = 45; th <= 315; th += 18) {
+    const t2 = th > 180 ? th - 360 : th;
+    if (Math.abs(t2) < 42) continue; // ステージ側はスキップ
+    s += aisleLine(t2, 137.5, 109.5, 38, (th === 87 || th === 267) ? 5 : 2.2);
+  }
+  s += aisleLine(90, 137.5, 109.5, 38, 5);
+  s += aisleLine(-90, 137.5, 109.5, 38, 5);
+
+  // センター: ステージに平行な座席列(縦線)。中央通路を1本空ける
+  for (let x = 123; x <= 261; x += 5.8) {
+    s += `<path d="M ${x.toFixed(1)} 116 V 163 M ${x.toFixed(1)} 173 V 220" fill="none" stroke="#c8961d" stroke-width="1.3" stroke-dasharray="1.5 1.3" opacity="0.6" clip-path="url(#floorClip)"/>`;
+  }
+
+  g.innerHTML = s;
+}
+genSeats();
+
+// センターのセンステ・バクステ・導線・(ブロック)をSVGへ描画(予想=点線・確定=実線)
+function renderCenterBlocks() {
+  const g = document.getElementById("centerBlocks");
+  const forecast = CENTER_CONFIG.status === "forecast";
+  let html = "";
+  if (CENTER_CONFIG.runway) {
+    const r = CENTER_CONFIG.runway;
+    html += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="3" fill="#fff" opacity="0.8"/>`;
+  }
+  if (CENTER_CONFIG.centerStage) {
+    const s = CENTER_CONFIG.centerStage;
+    html += `<circle cx="${s.cx}" cy="${s.cy}" r="${s.r}" fill="url(#gStage)"/>
+      <circle cx="${s.cx}" cy="${s.cy}" r="${s.r - 2.5}" fill="none" stroke="#c4b5fd" stroke-width="1" opacity="0.9"/>
+      <text x="${s.cx}" y="${s.cy + 2.5}" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="bold">センステ</text>`;
+  }
+  if (CENTER_CONFIG.backStage) {
+    const bs = CENTER_CONFIG.backStage;
+    html += `<rect x="${bs.x}" y="${bs.y}" width="${bs.w}" height="${bs.h}" rx="4" fill="url(#gStage)"/>
+      <text x="${bs.x + bs.w / 2}" y="${bs.y + bs.h / 2 + 2.5}" text-anchor="middle" fill="#fff" font-size="6" font-weight="bold">バクステ</text>`;
+  }
+  for (const b of CENTER_CONFIG.blocks) {
+    html += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="4"
+      fill="#fff" opacity="0.55" stroke="#b45309" stroke-width="1"
+      ${forecast ? 'stroke-dasharray="3,2"' : ''}/>
+      <text x="${b.x + b.w / 2}" y="${b.y + b.h / 2 + 3.5}" text-anchor="middle"
+      fill="#b45309" font-size="9" font-weight="bold">${b.name}</text>`;
+  }
+  g.innerHTML = html;
+}
+renderCenterBlocks();
+
+// 列・番号から向き・深さの説明文を作る(ステージ=右、番号1=向かって右)
+function centerDesc(row, numRatio) {
+  const depth = row <= 10 ? "ステージ目の前" : row <= 22 ? "フロア中ほど・センステ近く" : row <= 38 ? "フロア後方" : "フロア最後方・バクステ近く";
+  const side = numRatio < 0.35 ? "・向かって右" : numRatio > 0.65 ? "・向かって左" : "・中央";
+  return depth + side;
+}
+
+const inputArea = document.getElementById("inputArea");
+const seatTypeBtns = document.querySelectorAll("#seatType button");
+
+seatTypeBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    seatTypeBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentType = btn.dataset.type;
+    renderInputs();
+  });
+});
+
+function renderInputs() {
+  if (currentType === "center") {
+    if (CENTER_CONFIG.scheme === "row") {
+      inputArea.innerHTML = `
+        <label>列<input type="tel" id="inRow" placeholder="例: 11"></label>
+        <label>番号<input type="tel" id="inNum" placeholder="例: 24"></label>`;
+    } else {
+      const opts = CENTER_CONFIG.blocks.map(b => `<option>${b.name}</option>`).join("");
+      inputArea.innerHTML = `
+        <label>ブロック<select id="inBlock">${opts}</select></label>
+        <label>列<input type="tel" id="inRow" placeholder="例: 5"></label>
+        <label>番号<input type="tel" id="inNum" placeholder="例: 12"></label>`;
+    }
+  } else if (currentType === "arena") {
+    inputArea.innerHTML = `
+      <label>ブロック<select id="inBlock">
+        <option>A</option><option>B</option><option>C</option>
+        <option>D</option><option>E</option><option>F</option>
+      </select></label>
+      <label>列(1〜22)<input type="tel" id="inRow" placeholder="例: 5"></label>
+      <label>番号<input type="tel" id="inNum" placeholder="例: 23"></label>`;
+  } else {
+    inputArea.innerHTML = `
+      <label>ブロック<select id="inBlock">
+        <option>北</option><option>東</option><option>南</option><option>西</option>
+      </select></label>
+      <label>列(1〜10)<input type="tel" id="inRow" placeholder="例: 5"></label>
+      <label>番号<input type="tel" id="inNum" placeholder="例: 52"></label>`;
+  }
+}
+
+document.getElementById("goBtn").addEventListener("click", () => {
+  if (!currentType) { alert("まず席種をタップしてね!"); return; }
+  const pin = document.getElementById("pin");
+  const resultText = document.getElementById("resultText");
+  const centerNotice = document.getElementById("centerNotice");
+  const shareBtn = document.getElementById("shareBtn");
+
+  if (currentType === "center") {
+    const forecast = CENTER_CONFIG.status === "forecast";
+    let x, y, seatLabel, desc;
+    if (CENTER_CONFIG.scheme === "row") {
+      const row = Math.min(Math.max(parseInt(document.getElementById("inRow").value) || 1, 1), CENTER_CONFIG.maxRow);
+      const num = parseInt(document.getElementById("inNum").value) || 1;
+      const numRatio = Math.min(num / CENTER_CONFIG.numPerRow, 1);
+      // 列: ステージ側(右)→後方(左) / 番号: 向かって右(下)→左(上)
+      x = 261 - (row / CENTER_CONFIG.maxRow) * 138;
+      y = 211 - numRatio * 88;
+      seatLabel = `センター ${row}列 ${num}番`;
+      desc = centerDesc(row, numRatio);
+    } else {
+      const blockName = document.getElementById("inBlock").value;
+      const b = CENTER_CONFIG.blocks.find(v => v.name === blockName);
+      if (!b) return;
+      x = b.x + b.w / 2; y = b.y + b.h / 2;
+      seatLabel = `センター ${blockName}ブロック`;
+      desc = "ステージと同じ1Fフロア";
+    }
+    pin.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+    pin.style.display = "";
+    resultText.style.display = "block";
+    resultText.innerHTML = `<span class="zone-name">${seatLabel}${forecast ? "(予想)" : ""}</span><br>${desc}のあたり! 🎉`;
+    centerNotice.innerHTML = forecast
+      ? `🎪 <b>これは予想配置です!</b><br>${CENTER_CONFIG.note}<br><b>初日(7/17)の夜に確定版へ更新する</b>ので、土曜参加の人はもう一度見に来てね。`
+      : `✅ <b>初日の実配置を反映済みの確定版です。</b>`;
+    centerNotice.style.display = "block";
+    shareBtn.style.display = "block";
+  } else {
+    const conf = BLOCKS[currentType];
+    const blockKey = document.getElementById("inBlock").value;
+    const b = conf[blockKey];
+    if (!b) return;
+    const row = Math.min(Math.max(parseInt(document.getElementById("inRow").value) || 1, 1), conf.maxRow);
+    const num = parseInt(document.getElementById("inNum").value) || 1;
+    // 列: 内周→外周へ / 番号: ブロック左端→右端へ(平均席数で近似)
+    const d = row / conf.maxRow;
+    let x = b.in[0] + (b.out[0] - b.in[0]) * d;
+    let y = b.in[1] + (b.out[1] - b.in[1]) * d;
+    const numRatio = Math.min(num / conf.numPerRow, 1) - 0.5;
+    const spread = currentType === "arena" ? 55 : 60;
+    x += b.tan[0] * numRatio * spread;
+    y += b.tan[1] * numRatio * spread;
+    pin.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+    pin.style.display = "";
+    const label = currentType === "arena" ? `アリーナ ${blockKey}ブロック` : `スタンド ${blockKey}`;
+    resultText.style.display = "block";
+    resultText.innerHTML = `<span class="zone-name">${label} ${row}列 ${num}番</span><br>${b.desc}のあたり!`;
+    centerNotice.style.display = "none";
+    shareBtn.style.display = "block";
+  }
+});
+
+// シェア画像生成(SVG→canvas→PNG。ポスター風)
+document.getElementById("shareBtn").addEventListener("click", async () => {
+  const svg = document.getElementById("venueMap");
+  const canvas = document.getElementById("shareCanvas");
+  const ctx = canvas.getContext("2d");
+
+  // 背景: 深い夜空グラデーション
+  const grad = ctx.createLinearGradient(0, 0, 800, 1000);
+  grad.addColorStop(0, "#3b0764");
+  grad.addColorStop(1, "#831843");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 800, 1000);
+
+  // タイトル
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 62px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
+  ctx.fillText("席ドコ?", 400, 96);
+  ctx.fillStyle = "#ddd6fe";
+  ctx.font = "700 28px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
+  ctx.fillText("≠ME 喝采パレード 横浜アリーナ", 400, 148);
+
+  // 白カード
+  ctx.fillStyle = "#ffffff";
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(40, 182, 720, 588, 28);
+    ctx.fill();
+  } else {
+    ctx.fillRect(40, 182, 720, 588);
+  }
+
+  // 会場図
+  const svgStr = new XMLSerializer().serializeToString(svg);
+  const img = new Image();
+  const blob = new Blob([svgStr], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  await new Promise(res => { img.onload = res; img.src = url; });
+  ctx.drawImage(img, 60, 212, 680, 525);
+  URL.revokeObjectURL(url);
+
+  // 座席テキスト
+  const lines = document.getElementById("resultText").innerText.split("\n");
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 42px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
+  ctx.fillText(lines[0] || "", 400, 852, 720);
+  ctx.fillStyle = "#fbcfe8";
+  ctx.font = "700 28px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
+  ctx.fillText(lines[1] || "", 400, 900, 720);
+  ctx.fillStyle = "#c4b5fd";
+  ctx.font = "400 21px \"Hiragino Sans\", \"Noto Sans JP\", sans-serif";
+  ctx.fillText("席ドコ? — 非公式ファンツール", 400, 956);
+
+  canvas.toBlob(async (pngBlob) => {
+    const file = new File([pngBlob], "sekidoko.png", { type: "image/png" });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: "席ドコ? #席ドコ" }); return; } catch (e) {}
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(pngBlob);
+    a.download = "sekidoko.png";
+    a.click();
+  });
+});
+</script>
+</body>
+</html>
