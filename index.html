@@ -73,6 +73,10 @@
     -webkit-appearance: none; appearance: none;
   }
   .inputs input:focus, .inputs select:focus { outline: none; border-color: var(--accent); }
+  .ticket-hint {
+    margin-top: 8px; font-size: 11px; line-height: 1.6; color: var(--muted);
+    background: #f7f4fd; border-radius: 8px; padding: 7px 9px;
+  }
   .go-btn {
     width: 100%; margin-top: 14px; padding: 14px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
@@ -142,13 +146,14 @@
 <div class="top-banner">⏰ センターの席は<b>7/17(金)夜、初日の実際の構成に更新</b>します。土曜参加の人はブックマークしてまた見てね!</div>
 
 <div class="card">
-  <h2>1. チケットの席種をタップ</h2>
+  <h2>1. 券面の「席種」をタップ</h2>
   <div class="seat-type" id="seatType">
-    <button data-type="center">センター<small>1F・ステージと同じ床</small></button>
-    <button data-type="arena">アリーナ<small>1〜2F・A〜Fブロック</small></button>
-    <button data-type="stand">スタンド<small>3〜4F・東西南北</small></button>
+    <button data-type="center">センター席<small>ステージと同じ床</small></button>
+    <button data-type="arena">アリーナ席<small>センターを囲む段</small></button>
+    <button data-type="stand">スタンド席<small>3〜4Fの上層</small></button>
   </div>
   <div class="inputs" id="inputArea"></div>
+  <div class="ticket-hint">券面の「<b>A4扉</b>」は入場ゲートなので入力不要。「<b>◯列</b>」「<b>◯番</b>」だけ、書いてあるとおりに入れてね</div>
   <button class="go-btn" id="goBtn">この席、ドコ?</button>
 </div>
 
@@ -278,7 +283,7 @@
 const CENTER_CONFIG = {
   status: "forecast",       // "forecast"(予想) | "confirmed"(確定)
   scheme: "row",            // "row"(センター○列○番) | "block"(英字ブロック式だった場合の保険)
-  maxRow: 50, numPerRow: 54, // 横アリ通し方式は最大63列×54番(ライブ基地)。エンドステージで実質50列程度と概算
+  maxRow: 63, numPerRow: 54, // 実チケット調査(2026-07-16)で確定: センター席は1〜63列 × 1〜54番
   note: "嫁の情報+同ツアー実績をもとにした予想です(メインステージから少し張り出す\"でべそ\"のみ。センターステージ・バックステージは無し)。",
   debeso: { x: 222, y: 159, w: 42, h: 16 },         // メインから少し張り出す"でべそ"(嫁情報)
   blocks: []  // scheme:"block" の場合のみ使用({name,x,y,w,h}を列挙)
@@ -292,7 +297,7 @@ const CENTER_CONFIG = {
 // ============================================================
 const BLOCKS = {
   arena: {
-    maxRow: 22, numPerRow: 42,
+    maxRow: 22, numPerRow: 60, // 公式図で実測: 各列おおむね〜58〜62番
     A: { in: [193, 234], out: [193, 262], tan: [-1, 0],      desc: "ステージ向かって右サイド" },
     B: { in: [114, 221], out: [88, 248],  tan: [-0.6, -0.8], desc: "ステージ正面の奥・向かって右寄り" },
     C: { in: [114, 115], out: [88, 88],   tan: [0.6, -0.8],  desc: "ステージ正面の奥・向かって左寄り" },
@@ -301,7 +306,7 @@ const BLOCKS = {
     F: { in: [256, 234], out: [274, 254], tan: [-0.8, 0.6],  desc: "ステージすぐ横(向かって右)" }
   },
   stand: {
-    maxRow: 10, numPerRow: 82,
+    maxRow: 10, numPerRow: 120, // 実チケットで109番の観測あり
     "北": { in: [120, 54],  out: [108, 28],  tan: [1, 0],     desc: "向かって左サイドの上層" },
     "東": { in: [283, 58],  out: [296, 30],  tan: [0.8, 0.6], desc: "ステージ寄り・向かって左の上層" },
     "西": { in: [53, 168],  out: [25, 168],  tan: [0, -1],    desc: "ステージ正面・いちばん奥の上層" },
@@ -417,34 +422,20 @@ seatTypeBtns.forEach(btn => {
   });
 });
 
+// 入力欄は「券面に書いてある通り」に打てる形にする(ここを分解させると使われない)
 function renderInputs() {
   if (currentType === "center") {
-    if (CENTER_CONFIG.scheme === "row") {
-      inputArea.innerHTML = `
-        <label>列<input type="tel" id="inRow" placeholder="例: 11"></label>
-        <label>番号<input type="tel" id="inNum" placeholder="例: 24"></label>`;
-    } else {
-      const opts = CENTER_CONFIG.blocks.map(b => `<option>${b.name}</option>`).join("");
-      inputArea.innerHTML = `
-        <label>ブロック<select id="inBlock">${opts}</select></label>
-        <label>列<input type="tel" id="inRow" placeholder="例: 5"></label>
-        <label>番号<input type="tel" id="inNum" placeholder="例: 12"></label>`;
-    }
+    inputArea.innerHTML = `
+      <label>列<input type="tel" id="inRow" placeholder="例: 26"></label>
+      <label>番<input type="tel" id="inNum" placeholder="例: 12"></label>`;
   } else if (currentType === "arena") {
     inputArea.innerHTML = `
-      <label>ブロック<select id="inBlock">
-        <option>A</option><option>B</option><option>C</option>
-        <option>D</option><option>E</option><option>F</option>
-      </select></label>
-      <label>列(1〜22)<input type="tel" id="inRow" placeholder="例: 5"></label>
-      <label>番号<input type="tel" id="inNum" placeholder="例: 23"></label>`;
+      <label>列<input type="text" id="inRowLabel" placeholder="例: A1" maxlength="4"></label>
+      <label>番<input type="tel" id="inNum" placeholder="例: 25"></label>`;
   } else {
     inputArea.innerHTML = `
-      <label>ブロック<select id="inBlock">
-        <option>北</option><option>東</option><option>南</option><option>西</option>
-      </select></label>
-      <label>列(1〜10)<input type="tel" id="inRow" placeholder="例: 5"></label>
-      <label>番号<input type="tel" id="inNum" placeholder="例: 52"></label>`;
+      <label>列<input type="text" id="inRowLabel" placeholder="例: 東4" maxlength="4"></label>
+      <label>番<input type="tel" id="inNum" placeholder="例: 109"></label>`;
   }
 }
 
@@ -454,15 +445,24 @@ function countEvent(name) {
   fetch(`https://api.counterapi.dev/v1/sekidoko/${name}/up`).catch(() => {});
 }
 
-// 全角数字→半角。空欄なら警告してnull(無警告で1列1番になるのを防ぐ)
-function toHankaku(s) { return (s || "").replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)); }
+// 全角(英字・数字)→半角。券面が「Ａ１列」のように全角なので必須
+function toHankaku(s) { return (s || "").replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)); }
+
+// センター席用: 列・番とも数字(券面「26列 12番」)
 function readRowNum(maxRow) {
   const rowRaw = toHankaku(document.getElementById("inRow").value).trim();
   const numRaw = toHankaku(document.getElementById("inNum").value).trim();
-  if (rowRaw === "" || numRaw === "") { alert("列と番号を入れてね!"); return null; }
+  if (rowRaw === "" || numRaw === "") { alert("列と番を入れてね!"); return null; }
   const row = Math.min(Math.max(parseInt(rowRaw, 10) || 1, 1), maxRow);
   const num = Math.max(parseInt(numRaw, 10) || 1, 1);
   return { row, num };
+}
+
+// アリーナ/スタンド用: 券面の「A1列」「東4列」をそのまま解釈する
+function parseRowLabel(raw, type) {
+  const s = toHankaku(raw).trim().toUpperCase().replace(/\s|列/g, "");
+  const m = type === "arena" ? s.match(/^([A-F])(\d{1,2})$/) : s.match(/^(東|西|南|北)(\d{1,2})$/);
+  return m ? { block: m[1], row: parseInt(m[2], 10) } : null;
 }
 
 document.getElementById("goBtn").addEventListener("click", () => {
@@ -484,7 +484,7 @@ document.getElementById("goBtn").addEventListener("click", () => {
       // 列: ステージ側(右)→後方(左) / 番号: 向かって右(下)→左(上)
       x = 261 - (row / CENTER_CONFIG.maxRow) * 138;
       y = 211 - numRatio * 88;
-      seatLabel = `センター ${row}列 ${num}番`;
+      seatLabel = `センター席 ${row}列 ${num}番`;
       desc = centerDesc(row, numRatio);
     } else {
       const blockName = document.getElementById("inBlock").value;
@@ -509,12 +509,21 @@ document.getElementById("goBtn").addEventListener("click", () => {
     document.getElementById("fbRow").style.display = "block";
   } else {
     const conf = BLOCKS[currentType];
-    const blockKey = document.getElementById("inBlock").value;
+    // 券面の「A1列」「東4列」をそのまま解釈
+    const p = parseRowLabel(document.getElementById("inRowLabel").value, currentType);
+    if (!p) {
+      alert(currentType === "arena"
+        ? "列は券面のとおり「A1」の形で入れてね(A〜Fのどれか+数字)"
+        : "列は券面のとおり「東4」の形で入れてね(東西南北+数字)");
+      return;
+    }
+    const blockKey = p.block;
     const b = conf[blockKey];
-    if (!b) return;
-    const rn = readRowNum(conf.maxRow);
-    if (!rn) return;
-    const row = rn.row, num = rn.num;
+    if (!b) { alert("そのブロックが見つからないよ"); return; }
+    const numRaw = toHankaku(document.getElementById("inNum").value).trim();
+    if (numRaw === "") { alert("番を入れてね!"); return; }
+    const row = Math.min(Math.max(p.row, 1), conf.maxRow);
+    const num = Math.max(parseInt(numRaw, 10) || 1, 1);
     // 列: 内周→外周へ / 番号: ブロック左端→右端へ(平均席数で近似)
     const d = row / conf.maxRow;
     let x = b.in[0] + (b.out[0] - b.in[0]) * d;
@@ -525,11 +534,12 @@ document.getElementById("goBtn").addEventListener("click", () => {
     y += b.tan[1] * numRatio * spread;
     pin.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
     pin.style.display = "";
-    const label = currentType === "arena" ? `アリーナ ${blockKey}ブロック` : `スタンド ${blockKey}`;
+    // 券面と同じ表記で返す(「アリーナ席 A1列 25番」)
+    const seatType = currentType === "arena" ? "アリーナ席" : "スタンド席";
     resultText.style.display = "block";
-    resultText.innerHTML = `<span class="zone-name">${label} ${row}列 ${num}番</span><br>${b.desc}のあたり!`;
-    // シェア画像はブロックまで(正確な列・番号は焼かない)
-    window.__shareL1 = label;
+    resultText.innerHTML = `<span class="zone-name">${seatType} ${blockKey}${row}列 ${num}番</span><br>${b.desc}のあたり!`;
+    // シェア画像はブロックまで(正確な列・番は焼かない)
+    window.__shareL1 = currentType === "arena" ? `アリーナ席 ${blockKey}ブロック` : `スタンド席 ${blockKey}`;
     window.__shareL2 = b.desc + "あたり!";
     centerNotice.style.display = "none";
     shareBtn.style.display = "block";
